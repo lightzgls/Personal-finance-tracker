@@ -30,3 +30,12 @@ func GetAllTransactions(db *pgx.Conn) ([]model.Transaction, error) {
 	}
 	return AllTransactions, nil
 }
+
+func AddTransactions(db *pgx.Conn, categoryID int, description string, transactionDate string) error {
+    _, err := db.Exec(
+        context.Background(),
+        `INSERT INTO TRANSACTION(CATEGORY_ID, DESCRIPTION, TRANSACTION_DATE) VALUES ($1, $2, $3)`,
+        categoryID, description, transactionDate,
+    )
+    return err
+}
