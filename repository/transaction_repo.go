@@ -4,8 +4,9 @@ import (
 	"context"
 	"finance-tracker/model"
 	"log"
-	"time"
 	"strings"
+	"time"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -19,7 +20,8 @@ func GetAllTransactions(db *pgx.Conn) ([]model.TransactionInfo, error) {
 													A.SOURCE_NAME,
 													A.SOURCE_TYPE
 												FROM TRANSACTION T
-													JOIN ACCOUNT A ON T.SOURCE_TYPE = A.SOURCE_TYPE AND T.SOURCE_NAME = A.SOURCE_NAME;
+													JOIN ACCOUNT A ON T.SOURCE_TYPE = A.SOURCE_TYPE AND T.SOURCE_NAME = A.SOURCE_NAME
+												ORDER BY T.TRANSACTION_DATE DESC;
 												`)
 	if err != nil {
 		log.Printf("ERROR querying : %v\n", err)
@@ -29,7 +31,7 @@ func GetAllTransactions(db *pgx.Conn) ([]model.TransactionInfo, error) {
 	var AllTransactions []model.TransactionInfo
 	for rows.Next() {
 		var t model.TransactionInfo
-		err := rows.Scan(&t.Amount, &t.CategoryType, &t.CategoryName, &t.Description , &t.TransactionDate, &t.SourceName, &t.SourceType)
+		err := rows.Scan(&t.Amount, &t.CategoryType, &t.CategoryName, &t.Description, &t.TransactionDate, &t.SourceName, &t.SourceType)
 		if err != nil {
 			log.Printf("ERROR scanning row: %v\n", err)
 			return nil, err
@@ -42,45 +44,68 @@ func GetAllTransactions(db *pgx.Conn) ([]model.TransactionInfo, error) {
 	return AllTransactions, nil
 }
 
-func AddTransactions(db *pgx.Conn, amount float64,
-	category_type, category_name, description, sourceName, SourceType string, transactionDate time.Time) error {
-	UpdateBalanceAdd := `UPDATE ACCOUNT 
+func AddTransactions(db *pgx.Conn, req model.AddTransactionRequest) error {
+	UpdateBalanceAddQuery := `UPDATE ACCOUNT 
 						SET balance = balance + $1
-						WHERE category_type = $2 AND category_name = $3;`
-	UpdateBalanceSub := `UPDATE ACCOUNT 
+						WHERE soucre_type = $2 AND source_name = $3;`
+	UpdateBalanceSubQuery := `UPDATE ACCOUNT 
 						SET balance = balance - $1
-						WHERE category_type = $2 AND category_name = $3;`
-	insertTransaction := `INSERT INTO TRANSACTION 
+						WHERE source_type = $2 AND source_name = $3;`
+	InsertTransactionQuery := `INSERT INTO TRANSACTION 
 						(category_type, category_name, amount, description, transaction_date, source_name, source_type)
 						VALUES ($1, $2, $3, $4, $5, $6, $7);`
-	
-	if strings.ToLower(category_type) == "expense" {
-		_, err := db.Exec(context.Background(), UpdateBalanceSub, amount, category_type, category_name)
+
+
+	transactionDate, err := time.Parse(time.DateOnly, req.TransactionDate)
+	if err != nil {
+		log.Printf("ERROR converting string to Date: %v\n", err)
+		return err
+	}
+
+	if strings.ToLower(req.CategoryType) != "income" && strings.ToLower(req.CategoryType) != "expense" {
+		return err
+	}
+
+	if strings.ToLower(req.CategoryType) == "expense" {
+		_, err := db.Exec(context.Background(), UpdateBalanceSubQuery, req.Amount, req.CategoryType, req.CategoryName)
 		if err != nil {
 			log.Printf("ERROR updating: %v", err)
 			return err
 		}
 	} else {
-		if strings.ToLower(category_type) == "income" {
-		_, err := db.Exec(context.Background(), UpdateBalanceAdd, amount, category_type, category_name)
+		if strings.ToLower(req.CategoryType) == "income" {
+			_, err := db.Exec(context.Background(), UpdateBalanceAddQuery, req.Amount, req.CategoryType, req.CategoryName)
 			if err != nil {
 				log.Printf("ERROR updating: %v", err)
 				return err
 			}
-		}	
+		}
 	}
-	_, err := db.Exec(context.Background(), insertTransaction, category_type, category_name, amount, description, transactionDate, sourceName, SourceType)
+	_, err = db.Exec(context.Background(), InsertTransactionQuery, req.CategoryType, req.CategoryName, req.Amount, req.Description, transactionDate, req.SourceName, req.SourceType)
 	if err != nil {
 		log.Printf("ERROR inserting: %v", err)
+		return err
+	}
+	log.Println("Success adding new transaction")
+	return nil
+}
+
+
+
+func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
+	InsertSourceQuery := "INSERT INTO ACCOUNT (source_name,source_type,balance) VALUE ($1,$2,$3)"
+	_,err := db.Exec(context.Background(),InsertSourceQuery,a.SourceName,a.SourceType,a.Balance)
+	if err != nil {
+		log.Printf("Error adding new source: %v\n",err)
 		return err
 	}
 	return nil
 }
 
 func GetSummary(db *pgx.Conn) (balance, monthIncome, monthExpense float64) {
-	balanceQuery := `SELECT COALESCE(SUM(balance), 0) FROM account;`
-	
-	err := db.QueryRow(context.Background(), balanceQuery).Scan(&balance)
+	BalanceQuery := `SELECT COALESCE(SUM(balance), 0) FROM account;`
+
+	err := db.QueryRow(context.Background(), BalanceQuery).Scan(&balance)
 	if err != nil {
 		log.Printf("ERROR querying total balance: %v\n", err)
 	}
@@ -100,21 +125,43 @@ func GetSummary(db *pgx.Conn) (balance, monthIncome, monthExpense float64) {
 	}
 	return
 }
-func GetAllSources(db *pgx.Conn) ([]model.Account, error){
+func GetAllSources(db *pgx.Conn) ([]model.Account, error) {
 	query := `SELECT * FROM ACCOUNT`
-	rows,err := db.Query(context.Background(),query)
+	rows, err := db.Query(context.Background(), query)
 	if err != nil {
-		log.Printf("ERROR querying: %v",err)
+		log.Printf("ERROR querying: %v", err)
 	}
 	var AllSource []model.Account
 	for rows.Next() {
 		var a model.Account
-		err := rows.Scan(&a.SourceName,&a.SourceType,&a.Balance, &a.CreatedAt)
+		err := rows.Scan(&a.SourceName, &a.SourceType, &a.Balance, &a.CreatedAt)
 		if err != nil {
 			log.Printf("ERROR scanning row: %v\n", err)
 			return nil, err
 		}
 		AllSource = append(AllSource, a)
 	}
-	return AllSource,nil
+	return AllSource, nil
+}
+
+
+
+
+func GetAllSoucesName(db *pgx.Conn) ([]string, error) {
+	query := `SELECT source_name FROM ACCOUNT`
+	rows, err := db.Query(context.Background(), query)
+	if err != nil {
+		log.Printf("ERROR querying: %v", err)
+	}
+	var Name []string
+	for rows.Next() {
+		var a string
+		err := rows.Scan(&a)
+		if err != nil {
+			log.Printf("ERROR scanning row: %v\n", err)
+			return nil, err
+		}
+		Name = append(Name, a)
+	}
+	return Name, nil
 }
