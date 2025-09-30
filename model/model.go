@@ -40,9 +40,24 @@ type TransactionInfo struct {
 }
 
 // APIResponse defines the structure for the JSON response.
-type APIResponse struct {
+type GetSummaryResponse struct {
 	Balance      float64           `json:"balance"`
 	MonthIncome  float64           `json:"month_income"`
 	MonthExpense float64           `json:"month_expense"`
 	Transactions []TransactionInfo `json:"transactions"`
+}
+
+type AddTransactionRequest struct {
+	Amount          float64 `json:"amount"`
+	CategoryType    string  `json:"category_type"`
+	CategoryName    string  `json:"category_name"`
+	Description     string  `json:"description"`
+	SourceName      string  `json:"source_name"`
+	SourceType      string  `json:"source_type"`
+	TransactionDate string  `json:"transaction_date"`
+}
+type AddSourceRequest struct {
+	SourceName string  `json:"source_name"`
+	SourceType string  `json:"source_type"`
+	Balance    float64 `json:"balance"`
 }
