@@ -5,12 +5,37 @@ import (
 	"finance-tracker/repository"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
-	"time"
 	"finance-tracker/model"
 	"github.com/jackc/pgx/v5"
 )
+
+
+func AddSourceHandler(db *pgx.Conn) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req model.AddSourceRequest 
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid JSON data", http.StatusBadRequest)
+			return
+		}
+		err := repository.AddSource(db,req)
+		if err != nil {
+			log.Printf("Failed to add new source: %v", err)
+			http.Error(w,"Failed to add new source..",http.StatusInternalServerError)
+			return 
+		}
+		w.Header().Set("Content-Type","Applcation/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(`{"message": "Source added successfully"}`))
+		log.Println("Transaction added successfully")
+	}
+}
+
 
 func AddTransactionHandler(db *pgx.Conn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -20,52 +45,28 @@ func AddTransactionHandler(db *pgx.Conn) http.HandlerFunc {
 			return
 		}
 
-		// Parse form data
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Invalid form data", http.StatusBadRequest)
+		var req model.AddTransactionRequest
+
+		// 2. Decode the JSON body into the struct
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid JSON data", http.StatusBadRequest)
 			return
 		}
 
-		// Get values from the form
-
-		amountStr := r.FormValue("amount")
-		category_type := r.FormValue("category_type")
-		category_name := r.FormValue("category_name")
-		description := r.FormValue("description")
-		sourceName := r.FormValue("source_name")
-		sourceType := r.FormValue("source_type")
-		transactionDateStr := r.FormValue("transaction_date")
-
-
-		transactionDate, err := time.Parse(time.DateOnly,transactionDateStr)
+		// 4. Call the repository function with data from the struct
+		err := repository.AddTransactions(db, req)
 		if err != nil {
-			log.Printf("ERROR convert string to Date: %v\n",err)
-			return
-		}
-
-		amount,err := strconv.ParseFloat(amountStr,64)
-		if err != nil {
-			log.Printf("ERROR convert string to float: %v\n",err)
-			return
-		}
-		if strings.ToLower(category_type) != "income" && strings.ToLower(category_type) != "expense" {
-			http.Error(w, "Invalid category_type", http.StatusBadRequest)
-			return
-		}
-
-		// Call the repository function
-		err = repository.AddTransactions(db, amount,category_type,category_name,description,sourceName,sourceType,transactionDate)
-		if err != nil {
+			log.Printf("Failed to add transaction: %v", err) // Log the actual error
 			http.Error(w, "Failed to add transaction", http.StatusInternalServerError)
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("Transaction added successfully"))
+		w.Write([]byte(`{"message": "Transaction added successfully"}`))
+		log.Println("Transaction added successfully")
 	}
 }
-
-
 
 func GetSummaryHandler(db *pgx.Conn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +92,7 @@ func GetSummaryHandler(db *pgx.Conn) http.HandlerFunc {
 		limitedTransactions := transactions[:limit]
 
 		// 4. Construct the response data structure
-		response := model.APIResponse{
+		response := model.GetSummaryResponse{
 			Balance:      balance,
 			MonthIncome:  monthIncome,
 			MonthExpense: monthExpense,
@@ -158,3 +159,13 @@ func GetAllSourcesHandler(db *pgx.Conn) http.HandlerFunc {
 
 	}
 }
+
+// func GetAllSoucesNameHandler(db *pgx.Conn) http.HandlerFunc{
+// 	return func (w http.ResponseWriter,r *http.Request)  {
+// 		if r.Method != http.MethodGet {
+// 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+// 		}
+// 		names, err := repository.GetAllSoucesName(db)
+// 		if err != nil 
+// 	}
+// }
