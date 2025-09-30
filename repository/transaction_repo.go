@@ -5,7 +5,7 @@ import (
 	"finance-tracker/model"
 	"log"
 	"time"
-
+	"strings"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -44,19 +44,32 @@ func GetAllTransactions(db *pgx.Conn) ([]model.TransactionInfo, error) {
 
 func AddTransactions(db *pgx.Conn, amount float64,
 	category_type, category_name, description, sourceName, SourceType string, transactionDate time.Time) error {
-	UpdateBalance := `UPDATE ACCOUNT 
+	UpdateBalanceAdd := `UPDATE ACCOUNT 
 						SET balance = balance + $1
+						WHERE category_type = $2 AND category_name = $3;`
+	UpdateBalanceSub := `UPDATE ACCOUNT 
+						SET balance = balance - $1
 						WHERE category_type = $2 AND category_name = $3;`
 	insertTransaction := `INSERT INTO TRANSACTION 
 						(category_type, category_name, amount, description, transaction_date, source_name, source_type)
 						VALUES ($1, $2, $3, $4, $5, $6, $7);`
-
-	_, err := db.Exec(context.Background(), UpdateBalance, amount, category_type, category_name)
-	if err != nil {
-		log.Printf("ERROR updating: %v", err)
-		return err
+	
+	if strings.ToLower(category_type) == "expense" {
+		_, err := db.Exec(context.Background(), UpdateBalanceSub, amount, category_type, category_name)
+		if err != nil {
+			log.Printf("ERROR updating: %v", err)
+			return err
+		}
+	} else {
+		if strings.ToLower(category_type) == "income" {
+		_, err := db.Exec(context.Background(), UpdateBalanceAdd, amount, category_type, category_name)
+			if err != nil {
+				log.Printf("ERROR updating: %v", err)
+				return err
+			}
+		}	
 	}
-	_, err = db.Exec(context.Background(), insertTransaction, category_type, category_name, amount, description, transactionDate, sourceName, SourceType)
+	_, err := db.Exec(context.Background(), insertTransaction, category_type, category_name, amount, description, transactionDate, sourceName, SourceType)
 	if err != nil {
 		log.Printf("ERROR inserting: %v", err)
 		return err
@@ -65,22 +78,30 @@ func AddTransactions(db *pgx.Conn, amount float64,
 }
 
 func GetSummary(db *pgx.Conn) (balance, monthIncome, monthExpense float64) {
-	query := `SELECT 
-		COALESCE((SELECT SUM(BALANCE) FROM ACCOUNT), 0) AS balance,
-		COALESCE((SELECT SUM(AMOUNT) FROM TRANSACTION WHERE CATEGORY_TYPE = 'income' AND DATE_TRUNC('month', TRANSACTION_DATE) = DATE_TRUNC('month', CURRENT_DATE)), 0) AS month_income,
-		COALESCE((SELECT SUM(AMOUNT) FROM TRANSACTION WHERE CATEGORY_TYPE = 'expense' AND DATE_TRUNC('month', TRANSACTION_DATE) = DATE_TRUNC('month', CURRENT_DATE)), 0) AS month_expense;
-    `
-	row := db.QueryRow(context.Background(), query)
-	err := row.Scan(&balance, &monthIncome, &monthExpense)
+	balanceQuery := `SELECT COALESCE(SUM(balance), 0) FROM account;`
+	
+	err := db.QueryRow(context.Background(), balanceQuery).Scan(&balance)
 	if err != nil {
-		log.Printf("ERROR querying: %v\n", err)
-		return
+		log.Printf("ERROR querying total balance: %v\n", err)
+	}
+
+	monthlyQuery := `
+		SELECT 
+			COALESCE(SUM(CASE WHEN LOWER(category_type) = 'income' THEN amount ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN LOWER(category_type) = 'expense' THEN amount ELSE 0 END), 0)
+		FROM 
+			transaction
+		WHERE 
+			DATE_TRUNC('month', transaction_date) = DATE_TRUNC('month', CURRENT_DATE);
+	`
+	err = db.QueryRow(context.Background(), monthlyQuery).Scan(&monthIncome, &monthExpense)
+	if err != nil {
+		log.Printf("ERROR querying monthly summary: %v\n", err)
 	}
 	return
 }
-
 func GetAllSources(db *pgx.Conn) ([]model.Account, error){
-	query := `SELECT source_name, source_type, balance FROM BALANCE`
+	query := `SELECT * FROM ACCOUNT`
 	rows,err := db.Query(context.Background(),query)
 	if err != nil {
 		log.Printf("ERROR querying: %v",err)
@@ -88,7 +109,7 @@ func GetAllSources(db *pgx.Conn) ([]model.Account, error){
 	var AllSource []model.Account
 	for rows.Next() {
 		var a model.Account
-		err := rows.Scan(&a.SourceName,&a.SourceType,&a.Balance, a.CreatedAt)
+		err := rows.Scan(&a.SourceName,&a.SourceType,&a.Balance, &a.CreatedAt)
 		if err != nil {
 			log.Printf("ERROR scanning row: %v\n", err)
 			return nil, err
@@ -96,5 +117,4 @@ func GetAllSources(db *pgx.Conn) ([]model.Account, error){
 		AllSource = append(AllSource, a)
 	}
 	return AllSource,nil
-
 }
