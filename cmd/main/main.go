@@ -22,19 +22,19 @@ func main() {
 	}()
 
 	//start the server
-	log.Println("Server is starting on http://localhost:5500/home")
-	
+	log.Println("Server is starting on http://localhost:8080/home")
 
-	fmt.Println("Homepage: http://localhost:5500/home")
-	fmt.Println("Transaction History: http://localhost:5500/Transactions")
-	fmt.Println("Balance: http://localhost:5500/Balances")
+	fmt.Println("Homepage: http://localhost:8080/home")
+	fmt.Println("Transaction History: http://localhost:8080/Transactions")
+	fmt.Println("Balance: http://localhost:8080/Balances")
 
 	http.HandleFunc(("/home"), handler.GetSummaryHandler(db))
 	http.HandleFunc(("/Transactions"), handler.GetAllTransactionsHandler(db))
 	http.HandleFunc(("/Balances"), handler.GetAllSourcesHandler(db))
+	http.HandleFunc(("/AddTransaction"), handler.AddTransactionHandler(db))
 
-	err = http.ListenAndServe(":5500", nil)
+	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
-		log.Fatal("ListenandServe: ", err)
+		log.Fatal("ListenAndServe: ", err)
 	}
 }
