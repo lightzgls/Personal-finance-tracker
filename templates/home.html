@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset = "UTF-8">
+        <style>
+            .form-group {
+                width: 150px;
+                margin-bottom: 1rem;
+                display: inline-block; /* Added for better spacing */
+            }
+
+            /* This is the new part that fixes your issue */
+            .form-group input, .form-group select {
+                width: 100%;
+                padding: 8px;
+                box-sizing: border-box; 
+                display: inline-block;
+            }
+            body {
+                font-family: 'Alan Sans', sans-serif;
+            }
+        </style>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div>
+            <h1>Personal Finance Tracker</h1>
+            <div>
+                <div>
+                    <h2>Add New Transaction</h2>
+                    <form >
+                        <div class = "form-group">
+                            <label for="transaction_amount">Transaction Amount</label><br>
+                            <input type="text" placeholder="Amount">
+                        </div>
+                        <div class ="form-group">
+                            <label for="transaction_type">Transaction Type</label><br>
+                            <select name="type of transaction" id="type">
+                                <option value="" disabled selected>Transaction Type</option>
+                                <option value="Income">Income</option>
+                                <option value="Expense">Expense</option>
+                            </select>
+                        </div>
+                        <div class = "form-group">
+                            <label for="transaction_name">Transaction Name</label>
+                            <input type="text" placeholder="Transaction Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="transaction_name">Source Name</label>
+                            <input type="text" placeholder="Transaction Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="transaction_name">Transaction Date</label>
+                            <input type="date" id = "start-date">
+                                <script>
+                                    // Get the current date in the required format YYYY-MM-DD
+                                    const today = new Date().toISOString().slice(0, 10);
+                                    // Find the input element by its ID and set its value
+                                    document.getElementById('start-date').value = today;
+                                </script>
+                        </div>
+                        <div class = "form-group">
+                            <input type="submit" name="" id="">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+    </body>
+</html>
