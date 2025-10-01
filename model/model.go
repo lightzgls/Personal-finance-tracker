@@ -13,7 +13,6 @@ type PageData struct {
 
 type Account struct {
 	SourceName string    `db:"source_name"`
-	SourceType string    `db:"source_type"`
 	Balance    float64   `db:"balance"`
 	CreatedAt  time.Time `db:"created_at"`
 }
@@ -23,41 +22,33 @@ type Transaction struct {
 	CategoryType    uuid.UUID `db:"category_type"`
 	CategoryName    string    `db:"category_name"`
 	Amount          float64   `db:"amount"`
-	Description     string    `db:"description"`
 	TransactionDate time.Time `db:"transaction_date"`
 	CreatedAt       time.Time `db:"created_at"`
 	SourceName      string    `db:"source_name"`
-	SourceType      string    `db:"source_type"`
 }
 type TransactionInfo struct {
 	Amount          float64   `db:"amount"`
 	CategoryType    string    `db:"category_type"`
 	CategoryName    string    `db:"category_name"`
-	Description     string    `db:"description"`
 	TransactionDate time.Time `db:"transaction_date"`
 	SourceName      string    `db:"source_name"`
-	SourceType      string    `db:"source_type"`
 }
 
-// APIResponse defines the structure for the JSON response.
 type GetSummaryResponse struct {
-	Balance      float64           `json:"balance"`
-	MonthIncome  float64           `json:"month_income"`
-	MonthExpense float64           `json:"month_expense"`
-	Transactions []TransactionInfo `json:"transactions"`
+	Balance      float64           `schema:"balance"`
+	MonthIncome  float64           `schema:"month_income"`
+	MonthExpense float64           `schema:"month_expense"`
+	Transactions []TransactionInfo `schema:"transactions"`
 }
 
 type AddTransactionRequest struct {
-	Amount          float64 `json:"amount"`
-	CategoryType    string  `json:"category_type"`
-	CategoryName    string  `json:"category_name"`
-	Description     string  `json:"description"`
-	SourceName      string  `json:"source_name"`
-	SourceType      string  `json:"source_type"`
-	TransactionDate string  `json:"transaction_date"`
+	Amount          string `schema:"amount"`
+	CategoryType    string `schema:"transaction_type"`
+	CategoryName    string `schema:"category_name"`
+	SourceName      string `schema:"source_name"`
+	TransactionDate string `schema:"transaction_date"`
 }
 type AddSourceRequest struct {
-	SourceName string  `json:"source_name"`
-	SourceType string  `json:"source_type"`
-	Balance    float64 `json:"balance"`
+	SourceName string `schema:"source_name"`
+	Balance    string `schema:"init_balance"`
 }
