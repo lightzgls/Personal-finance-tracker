@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"github.com/gorilla/sessions"
 )
+var store = sessions.NewCookieStore([]byte("random-key"))
 
 func main() {
 	//establish db connection
@@ -32,7 +34,7 @@ func main() {
 	http.HandleFunc(("/Transactions"), handler.GetAllTransactionsHandler(db))
 	http.HandleFunc(("/Balances"), handler.GetAllSourcesHandler(db))
 	http.HandleFunc(("/AddTransaction"), handler.AddTransactionHandler(db))
-
+	http.HandleFunc(("/AddSource"), handler.AddSourceHandler(db))
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
