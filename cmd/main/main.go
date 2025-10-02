@@ -8,7 +8,9 @@ import (
 	"log"
 	"net/http"
 	"github.com/gorilla/sessions"
+	"html/template"
 )
+
 var store = sessions.NewCookieStore([]byte("random-key"))
 
 func main() {
@@ -29,8 +31,17 @@ func main() {
 	fmt.Println("Homepage: http://localhost:8080/home")
 	fmt.Println("Transaction History: http://localhost:8080/Transactions")
 	fmt.Println("Balance: http://localhost:8080/Balances")
+	
 
-	http.HandleFunc(("/home"), handler.GetSummaryHandler(db))
+
+	templates := template.Must(template.ParseFiles("templates/home.html"));
+
+
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+    	http.Redirect(w, r, "/home", http.StatusMovedPermanently)
+	})
+	http.HandleFunc(("/home"), handler.GetSummaryHandler(db,templates))
 	http.HandleFunc(("/Transactions"), handler.GetAllTransactionsHandler(db))
 	http.HandleFunc(("/Balances"), handler.GetAllSourcesHandler(db))
 	http.HandleFunc(("/AddTransaction"), handler.AddTransactionHandler(db))
