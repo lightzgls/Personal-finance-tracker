@@ -35,10 +35,14 @@ type TransactionInfo struct {
 }
 
 type GetSummaryResponse struct {
-	Balance      float64           `schema:"balance"`
-	MonthIncome  float64           `schema:"month_income"`
-	MonthExpense float64           `schema:"month_expense"`
-	Transactions []TransactionInfo `schema:"transactions"`
+	Balance          float64
+	MonthIncome      float64
+	MonthExpense     float64
+	Transactions     []TransactionInfo
+	FormErrors       map[string]string
+	ShowPopup        bool
+	AllTransactions  []TransactionInfo
+	AvailableSources []string
 }
 
 type AddTransactionRequest struct {
@@ -50,5 +54,6 @@ type AddTransactionRequest struct {
 }
 type AddSourceRequest struct {
 	SourceName string `schema:"source_name"`
-	Balance    string `schema:"init_balance"`
+	Balance    string `schema:"balance"`
+	FormErrors map[string]string
 }

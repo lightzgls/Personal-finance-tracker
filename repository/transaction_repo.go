@@ -2,14 +2,34 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"finance-tracker/model"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
+
 	"github.com/jackc/pgx/v5"
 )
 
+func sourceExist(db *pgx.Conn, name string) (bool, error) {
+	var placeholderID string
+	ExistCheck := `SELECT source_name FROM ACCOUNT WHERE source_name = $1;`
+
+	err := db.QueryRow(context.Background(), ExistCheck,name).Scan(&placeholderID)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			log.Printf("Found no %v in account list\n",name)
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func GetAllTransactions(db *pgx.Conn) ([]model.TransactionInfo, error) {
+
 	rows, err := db.Query(context.Background(), `SELECT
 													T.AMOUNT,
 													T.CATEGORY_TYPE,
@@ -18,7 +38,7 @@ func GetAllTransactions(db *pgx.Conn) ([]model.TransactionInfo, error) {
 													A.SOURCE_NAME
 												FROM TRANSACTION T
 													JOIN ACCOUNT A ON T.SOURCE_NAME = A.SOURCE_NAME
-												ORDER BY T.TRANSACTION_DATE DESC;
+												ORDER BY T.TRANSACTION_DATE DESC, T.CREATED_AT DESC;
 												`)
 	if err != nil {
 		log.Printf("ERROR querying transactions : %v\n", err)
@@ -44,59 +64,85 @@ func GetAllTransactions(db *pgx.Conn) ([]model.TransactionInfo, error) {
 }
 
 func AddTransactions(db *pgx.Conn, req model.AddTransactionRequest) error {
-	UpdateBalanceAddQuery := `UPDATE ACCOUNT 
-						SET balance = balance + $1
-						WHERE  source_name = $2;`
-	UpdateBalanceSubQuery := `UPDATE ACCOUNT 
-						SET balance = balance - $1
-						WHERE source_name = $2;`
-	InsertTransactionQuery := `INSERT INTO TRANSACTION 
-						(category_type, category_name, amount, transaction_date, source_name)
-						VALUES ($1, $2, $3, $4, $5);`
-
-
-	amount, err := strconv.ParseFloat(req.Amount,64)
+	amount, err := strconv.ParseFloat(req.Amount, 64)
 	if err != nil {
-		log.Printf("Error parsing string to Float64: %v\n",err)
-	}
-
-	if strings.ToLower(req.CategoryType) != "income" && strings.ToLower(req.CategoryType) != "expense" {
+		log.Printf("Error parsing string to Float64: %v\n", err)
 		return err
 	}
 
-	if strings.ToLower(req.CategoryType) == "expense" {
-		_, err := db.Exec(context.Background(), UpdateBalanceSubQuery, amount, req.CategoryName)
-		if err != nil {
-			log.Printf("ERROR updating: %v", err)
-			return err
-		}
+	categoryType := strings.ToLower(req.CategoryType)
+	if categoryType != "income" && categoryType != "expense" {
+		return errors.New("invalid category_type: must be 'income' or 'expense'")
+	}
+
+	// 1. Begin a database transaction
+	tx, err := db.Begin(context.Background())
+	if err != nil {
+		log.Printf("ERROR begin a transaction: %v", err)
+		return err
+	}
+	// Defer a rollback in case anything goes wrong. It will be a no-op if we commit.
+	defer tx.Rollback(context.Background())
+
+	// 2. Update the account balance within the transaction
+	var updateQuery string
+	if categoryType == "expense" {
+		updateQuery = `UPDATE ACCOUNT SET balance = balance - $1 WHERE source_name = $2;`
 	} else {
-		if strings.ToLower(req.CategoryType) == "income" {
-			_, err := db.Exec(context.Background(), UpdateBalanceAddQuery, amount, req.CategoryName)
-			if err != nil {
-				log.Printf("ERROR updating: %v", err)
-				return err
-			}
-		}
+		updateQuery = `UPDATE ACCOUNT SET balance = balance + $1 WHERE source_name = $2;`
 	}
-	_, err = db.Exec(context.Background(), InsertTransactionQuery, req.CategoryType, req.CategoryName, amount, req.TransactionDate, req.SourceName)
+
+	// Use tx.Exec, not db.Exec
+	cmdTag, err := tx.Exec(context.Background(), updateQuery, amount, req.SourceName)
 	if err != nil {
-		log.Printf("ERROR inserting: %v", err)
+		log.Printf("ERROR updating balance: %v", err)
 		return err
 	}
-	log.Println("Success adding new transaction")
-	return nil
+    
+    // Check if any row was actually updated. If not, the account doesn't exist.
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("account with source_name '%s' not found", req.SourceName)
+	}
 
+
+	// 3. Insert the transaction record within the transaction
+	insertQuery := `INSERT INTO TRANSACTION 
+					  (category_type, category_name, amount, transaction_date, source_name)
+					  VALUES ($1, $2, $3, $4, $5);`
+
+	// Use tx.Exec, not db.Exec
+	_, err = tx.Exec(context.Background(), insertQuery, req.CategoryType, req.CategoryName, amount, req.TransactionDate, req.SourceName)
+	if err != nil {
+		log.Printf("ERROR inserting transaction: %v", err)
+		return err
+	}
+
+	// 4. If all commands succeed, commit the transaction to make the changes permanent
+	log.Println("Success adding new transaction")
+	return tx.Commit(context.Background())
 }
 
+var ErrDuplicateSource = errors.New("repository: source with that name already exists")
+var ErrInvalidBalance = errors.New("repository: initial balance cannot be negative")
 
 
 func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
+	exist, err:= sourceExist(db,a.SourceName)
+	if err != nil {
+		return err
+	}
+	if exist {
+		return ErrDuplicateSource
+	}
 	InsertSourceQuery := "INSERT INTO ACCOUNT (source_name,balance) VALUES ($1,$2);"
 	balance, err := strconv.ParseFloat(a.Balance,64)
 	if err != nil {
 		log.Printf("Error parsing string to float64: %v\n",err)
+		return err
 	}
+	if balance < 0 {
+        return ErrInvalidBalance
+    }
 	_,err = db.Exec(context.Background(),InsertSourceQuery,a.SourceName,balance)
 	if err != nil {
 		log.Printf("Error adding new source: %v\n",err)
@@ -105,8 +151,10 @@ func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
 	return nil
 }
 
-func GetSummary(db *pgx.Conn) (balance, monthIncome, monthExpense float64) {
-	BalanceQuery := `SELECT COALESCE(SUM(balance), 0) FROM account;`
+
+
+func GetSummary(db *pgx.Conn) (balance, monthIncome, monthExpense float64, Error error) {
+	BalanceQuery := `SELECT COALESCE(SUM(balance), 0) FROM account;` 
 
 	err := db.QueryRow(context.Background(), BalanceQuery).Scan(&balance)
 	if err != nil {
@@ -148,14 +196,15 @@ func GetAllSources(db *pgx.Conn) ([]model.Account, error) {
 }
 
 
-
-
 func GetAllSoucesName(db *pgx.Conn) ([]string, error) {
 	query := `SELECT source_name FROM ACCOUNT`
 	rows, err := db.Query(context.Background(), query)
 	if err != nil {
 		log.Printf("ERROR querying: %v", err)
+		return nil, err
 	}
+	defer rows.Close()
+
 	var Name []string
 	for rows.Next() {
 		var a string
@@ -165,6 +214,9 @@ func GetAllSoucesName(db *pgx.Conn) ([]string, error) {
 			return nil, err
 		}
 		Name = append(Name, a)
+	}
+	if err = rows.Err(); err != nil {
+		return nil,err
 	}
 	return Name, nil
 }
