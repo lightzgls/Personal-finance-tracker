@@ -135,11 +135,19 @@ func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
 		return ErrDuplicateSource
 	}
 	InsertSourceQuery := "INSERT INTO ACCOUNT (source_name,balance) VALUES ($1,$2);"
-	balance, err := strconv.ParseFloat(a.Balance,64)
-	if err != nil {
-		log.Printf("Error parsing string to float64: %v\n",err)
-		return err
+	var balance float64 // Declare the variable to hold the final value
+
+	if a.Balance == "" {
+		balance = 0.0
+	} else {
+		var err error
+		balance, err = strconv.ParseFloat(a.Balance, 64)
+		if err != nil {
+			log.Printf("An unexpected error occurred: %v", err)
+			return err
+		}
 	}
+	
 	if balance < 0 {
         return ErrInvalidBalance
     }
