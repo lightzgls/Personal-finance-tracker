@@ -81,50 +81,54 @@ func AddTransactions(db *pgx.Conn, req model.AddTransactionRequest) error {
 		log.Printf("ERROR begin a transaction: %v", err)
 		return err
 	}
-	// Defer a rollback in case anything goes wrong. It will be a no-op if we commit.
 	defer tx.Rollback(context.Background())
 
-	// 2. Update the account balance within the transaction
 	var updateQuery string
 	if categoryType == "expense" {
-		updateQuery = `UPDATE ACCOUNT SET balance = balance - $1 WHERE source_name = $2;`
+		var currentBalance float64
+		checkBalanceQuery := `SELECT balance FROM ACCOUNT WHERE source_name = $1;`
+
+		err := db.QueryRow(context.Background(),checkBalanceQuery, req.SourceName).Scan(&currentBalance)
+		if err != nil {
+			return fmt.Errorf("error checking balance for source '%s': %w", req.SourceName, err)
+		}
+
+		if currentBalance < amount {
+			return ErrNotEnoughBalance
+		}
+		updateQuery = `UPDATE ACCOUNT SET balance = balance - $1 WHERE source_name = $2;` 
 	} else {
 		updateQuery = `UPDATE ACCOUNT SET balance = balance + $1 WHERE source_name = $2;`
 	}
 
-	// Use tx.Exec, not db.Exec
 	cmdTag, err := tx.Exec(context.Background(), updateQuery, amount, req.SourceName)
 	if err != nil {
 		log.Printf("ERROR updating balance: %v", err)
 		return err
 	}
     
-    // Check if any row was actually updated. If not, the account doesn't exist.
 	if cmdTag.RowsAffected() == 0 {
 		return fmt.Errorf("account with source_name '%s' not found", req.SourceName)
 	}
 
 
-	// 3. Insert the transaction record within the transaction
 	insertQuery := `INSERT INTO TRANSACTION 
 					  (category_type, category_name, amount, transaction_date, source_name)
 					  VALUES ($1, $2, $3, $4, $5);`
 
-	// Use tx.Exec, not db.Exec
 	_, err = tx.Exec(context.Background(), insertQuery, req.CategoryType, req.CategoryName, amount, req.TransactionDate, req.SourceName)
 	if err != nil {
 		log.Printf("ERROR inserting transaction: %v", err)
 		return err
 	}
 
-	// 4. If all commands succeed, commit the transaction to make the changes permanent
 	log.Println("Success adding new transaction")
 	return tx.Commit(context.Background())
 }
 
 var ErrDuplicateSource = errors.New("repository: source with that name already exists")
 var ErrInvalidBalance = errors.New("repository: initial balance cannot be negative")
-
+var ErrNotEnoughBalance = errors.New("repository: the choosen source doesnt have enough in balance")
 
 func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
 	exist, err:= sourceExist(db,a.SourceName)
@@ -147,7 +151,7 @@ func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
 			return err
 		}
 	}
-	
+
 	if balance < 0 {
         return ErrInvalidBalance
     }

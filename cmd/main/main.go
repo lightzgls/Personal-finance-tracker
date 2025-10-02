@@ -27,13 +27,8 @@ func main() {
 
 	//start the server
 	log.Println("Server is starting on http://localhost:8080/home")
-
 	fmt.Println("Homepage: http://localhost:8080/home")
-	fmt.Println("Transaction History: http://localhost:8080/Transactions")
-	fmt.Println("Balance: http://localhost:8080/Balances")
 	
-
-
 	templates := template.Must(template.ParseFiles("templates/home.html"));
 
 
@@ -42,9 +37,8 @@ func main() {
     	http.Redirect(w, r, "/home", http.StatusMovedPermanently)
 	})
 	http.HandleFunc(("/home"), handler.GetSummaryHandler(db,templates))
-	http.HandleFunc(("/Transactions"), handler.GetAllTransactionsHandler(db))
 	http.HandleFunc(("/Balances"), handler.GetAllSourcesHandler(db))
-	http.HandleFunc(("/AddTransaction"), handler.AddTransactionHandler(db))
+	http.HandleFunc(("/AddTransaction"), handler.AddTransactionHandler(db,templates))
 	http.HandleFunc(("/AddSource"), handler.AddSourceHandler(db))
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {

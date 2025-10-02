@@ -34,15 +34,12 @@ func AddSourceHandler(db *pgx.Conn) http.HandlerFunc {
 		err := decoder.Decode(&req, r.PostForm)
 		if err != nil {
 			log.Printf("!!! Failed to decode form data: %v", err)
-			// OPTIONAL: Redirect with a decoding error
 			http.Redirect(w, r, "/home?error=bad_form_data", http.StatusSeeOther)
 			return
 		}
 
-		// 3. Try to add the source to the database
 		err = repository.AddSource(db, req)
 
-		// 4. Handle the result from the database
 		if errors.Is(err, repository.ErrDuplicateSource) {
 			log.Print("Duplicate source error, redirecting")
 			http.Redirect(w, r, "/home?error=source_already_exist", http.StatusSeeOther)
@@ -62,7 +59,7 @@ func AddSourceHandler(db *pgx.Conn) http.HandlerFunc {
 	}
 }
 
-func AddTransactionHandler(db *pgx.Conn) http.HandlerFunc {
+func AddTransactionHandler(db *pgx.Conn, tmpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Only allow POST requests
 		if r.Method != http.MethodPost {
@@ -91,11 +88,57 @@ func AddTransactionHandler(db *pgx.Conn) http.HandlerFunc {
 			return
 		}
 		err = repository.AddTransactions(db, req)
-		if err != nil {
-			log.Printf("Failed to add new source: %v", err)
-			http.Error(w, "Failed to add new source", http.StatusInternalServerError)
+		if errors.Is(err, repository.ErrNotEnoughBalance) {
+			log.Println("Insufficient balance, re-rendering page with error...")
+			transactions, err := repository.GetAllTransactions(db)
+			if err != nil {
+				http.Error(w, "Failed to fetch transactions", http.StatusInternalServerError)
+				return
+			}
+
+			balance, monthIncome, monthExpense, err := repository.GetSummary(db)
+			if err != nil {
+				http.Error(w, "Failed to fetch balance", http.StatusInternalServerError)
+				return
+			}
+
+			sources, err := repository.GetAllSoucesName(db)
+			if err != nil {
+				http.Error(w, "Failed to fetch sources", http.StatusInternalServerError)
+				return
+			}
+			limit := 5
+			if len(transactions) < limit {
+				limit = len(transactions)
+			}
+			limitedTransactions := transactions[:limit]
+
+			response := model.GetSummaryResponse{
+				Balance:          balance,
+				MonthIncome:      monthIncome,
+				MonthExpense:     monthExpense,
+				Transactions:     limitedTransactions,
+				AllTransactions:  transactions,
+				AvailableSources: sources,
+
+				FormErrors: map[string]string{
+					"not_enough_balance": "Insufficient funds in this account.",
+				},
+			}
+
+			err = tmpl.ExecuteTemplate(w, "home.html", response)
+			if err != nil {
+				log.Printf("Failed to render template: %v", err)
+			}
 			return
 		}
+
+		if err != nil {
+			http.Error(w, "An internal server error occurred", http.StatusInternalServerError)
+			return
+		}
+
+		log.Println("Transaction added successfully, redirecting.")
 		http.Redirect(w, r, "/home", http.StatusSeeOther)
 	}
 }
@@ -116,7 +159,7 @@ func GetSummaryHandler(db *pgx.Conn, tmpl *template.Template) http.HandlerFunc {
 		}
 
 		// 3. Fetch summary data from the repository
-		balance, monthIncome, monthExpense,err := repository.GetSummary(db)
+		balance, monthIncome, monthExpense, err := repository.GetSummary(db)
 		if err != nil {
 			http.Error(w, "Failed to fetch balance", http.StatusInternalServerError)
 			return
@@ -127,22 +170,30 @@ func GetSummaryHandler(db *pgx.Conn, tmpl *template.Template) http.HandlerFunc {
 		}
 		limitedTransactions := transactions[:limit]
 
-
-
 		//popup for transaction history
-		var Popup = false
-		if r.URL.Query().Get("show_all_transactions") == "true" {
-			Popup = true
-		}
+		var TransPopup = false
+		var sourcePopup = false
 
+		if r.URL.Query().Get("show_all_transactions") == "true" {
+			TransPopup = true
+		}
+		var AllSources []model.Account
+		if r.URL.Query().Get("show_all_sources") == "true" {
+			sourcePopup = true
+			sourcesWithBalance, err := repository.GetAllSources(db)
+			if err != nil {
+				http.Error(w, "Failed to fetch source balances", http.StatusInternalServerError)
+				return
+			}
+			AllSources = sourcesWithBalance
+		}
 
 		// get sources name
 		sources, err := repository.GetAllSoucesName(db)
-        if err != nil {
-            http.Error(w, "Failed to fetch sources", http.StatusInternalServerError)
-            return
-        }
-
+		if err != nil {
+			http.Error(w, "Failed to fetch sources", http.StatusInternalServerError)
+			return
+		}
 
 		//responsible for the red text under the input box
 		formErrors := make(map[string]string)
@@ -151,48 +202,27 @@ func GetSummaryHandler(db *pgx.Conn, tmpl *template.Template) http.HandlerFunc {
 			formErrors["source_name"] = "This source already exists. Please choose another."
 		} else if errorKey == "negative_balance" {
 			formErrors["balance"] = "Initial balance cannot be a negative number."
+		} else if errorKey == "balance_low" {
+			formErrors["not_enough_balance"] = "Insufficient funds in this account."
 		}
 
-
 		response := model.GetSummaryResponse{
-			Balance:         balance,
-			MonthIncome:     monthIncome,
-			MonthExpense:    monthExpense,
-			Transactions:    limitedTransactions,
-			FormErrors:      formErrors,
-			ShowPopup:       Popup,
-			AllTransactions: transactions,
+			Balance:          balance,
+			MonthIncome:      monthIncome,
+			MonthExpense:     monthExpense,
+			Transactions:     limitedTransactions,
+			FormErrors:       formErrors,
+			ShowTransPopup:   TransPopup,
+			AllTransactions:  transactions,
 			AvailableSources: sources,
+			ShowSourcesPopup: sourcePopup,
+			AllSources:       AllSources,
 		}
 
 		err = tmpl.ExecuteTemplate(w, "home.html", response)
 		if err != nil {
 			log.Printf("Failed to render template: %v", err)
 		}
-	}
-}
-
-func GetAllTransactionsHandler(db *pgx.Conn) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		transactions, err := repository.GetAllTransactions(db)
-		if err != nil {
-			http.Error(w, "Failed to fetch transactions", http.StatusInternalServerError)
-			return
-		}
-		response := transactions
-
-		w.Header().Set("Content-Type", "application/json")
-
-		// 6. Encode the response struct to JSON and write it to the response writer
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			// This error happens if the response struct can't be converted to JSON.
-			http.Error(w, "Failed to serialize response", http.StatusInternalServerError)
-		}
-
 	}
 }
 

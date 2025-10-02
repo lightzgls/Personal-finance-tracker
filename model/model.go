@@ -40,9 +40,11 @@ type GetSummaryResponse struct {
 	MonthExpense     float64
 	Transactions     []TransactionInfo
 	FormErrors       map[string]string
-	ShowPopup        bool
+	ShowTransPopup   bool
 	AllTransactions  []TransactionInfo
 	AvailableSources []string
+	ShowSourcesPopup bool
+	AllSources       []Account
 }
 
 type AddTransactionRequest struct {
