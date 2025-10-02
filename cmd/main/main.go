@@ -7,11 +7,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"github.com/gorilla/sessions"
 	"html/template"
 )
-
-var store = sessions.NewCookieStore([]byte("random-key"))
 
 func main() {
 	//establish db connection
