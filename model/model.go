@@ -10,6 +10,7 @@ type Account struct {
 	SourceName string    `db:"source_name"`
 	Balance    float64   `db:"balance"`
 	CreatedAt  time.Time `db:"created_at"`
+	IsActive   bool      `db:"is_active"`
 }
 
 type Transaction struct {
@@ -22,6 +23,7 @@ type Transaction struct {
 	SourceName      string    `db:"source_name"`
 }
 type TransactionInfo struct {
+	TransactionID   uuid.UUID `db:"transaction_id"`
 	Amount          float64   `db:"amount"`
 	CategoryType    string    `db:"category_type"`
 	CategoryName    string    `db:"category_name"`
@@ -29,7 +31,7 @@ type TransactionInfo struct {
 	SourceName      string    `db:"source_name"`
 }
 
-type GetSummaryResponse struct {
+type PageData struct {
 	Balance          float64
 	MonthIncome      float64
 	MonthExpense     float64
