@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -7,122 +7,145 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* General Body and Font Styles */
+        :root {
+            --bg-color-main: #f0f7f0;
+            --bg-color-card: #ffffff;
+            --primary-color: #357e3b;
+            --primary-color-hover: #2a6a30;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --border-color: #ddd;
+            --text-color-light: #ffffff;
+            --text-color-dark: #333;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --border-radius: 8px;
+        }
+
+
         body {
-            background-color: rgb(202, 243, 202);
+            background-color: var(--bg-color-main);
             font-family: 'Roboto', sans-serif;
-            padding: 1rem;
+            color: var(--text-color-dark);
+            padding: 1.5rem;
             margin: 0;
         }
 
-        h2 {
-            display: inline-block;
+        h1,
+        h2,
+        h3 {
             margin-top: 0;
         }
 
+        h1 {
+            margin-bottom: 2rem;
+        }
+
         section {
-            background-color: rgb(236, 248, 235);
-            border-radius: 10px;
-            margin-top: 30px;
+            background-color: var(--bg-color-card);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-top: 2rem;
             padding: 1.5rem;
         }
 
-        /* Form Styling */
+
         form {
             display: flex;
             flex-wrap: wrap;
             align-items: flex-end;
-            gap: 1rem;
-            /* Replaces margin-right */
+            gap: 1.5rem;
         }
 
         .form-group {
-            flex: 1 1 170px;
-            /* Allows items to grow, shrink, and have a base width */
-            min-width: 170px;
+            flex: 1 1 180px;
+            min-width: 180px;
         }
 
         .form-group label {
             font-weight: 500;
             display: block;
-            margin-bottom: 0.3rem;
+            margin-bottom: 0.5rem;
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             box-sizing: border-box;
-            height: 38px;
-            /* Match button height */
+            height: 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
-        form button {
-            width: 100%;
-            max-width: 170px;
-            /* To align with other form groups */
-            height: 38px;
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(53, 126, 59, 0.2);
         }
 
-        /* Table Styling */
+        .error-text {
+            color: var(--error-color);
+            font-size: 0.8em;
+            padding-top: 4px;
+            /* Give it some space from the input field */
+            min-height: 1.2em;
+            /* Prevent layout shifts when errors appear/disappear */
+        }
+
+
         table {
             width: 100%;
             border-collapse: collapse;
-            border-radius: 10px;
-            /* Note: border-radius on table requires border-collapse: separate; or overflow: hidden on a wrapper */
             margin: 0;
         }
 
         th,
         td {
-            border: 1px solid #ddd;
-            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 15px;
+            text-align: left;
         }
 
         thead {
-            background-color: #f2f2f2;
+            background-color: #f9f9f9;
         }
 
-        /* Utility and Transaction Colors */
+        tbody tr:last-child th,
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
         .income {
-            color: #28a745;
+            color: var(--success-color);
             font-weight: 500;
         }
 
         .expense {
-            color: #dc3545;
+            color: var(--error-color);
             font-weight: 500;
-        }
-
-        .error-text {
-            color: #dc3545;
-            font-size: 0.8em;
-            margin-top: 4px;
         }
 
         .text-right {
             text-align: right;
         }
 
-        /* Layout for Summary & Recent Sections */
         .summary-container {
             display: flex;
             flex-wrap: wrap;
-            /* Allows items to wrap on smaller screens */
-            gap: 20px;
+            gap: 2rem;
         }
 
         .summary-card {
             flex: 1 1 30%;
-            /* Grow, shrink, with a base of 30% */
             min-width: 280px;
         }
 
         .recent-transactions-card {
             flex: 2 1 60%;
-            /* Grow, shrink, with a base of 60% */
             min-width: 300px;
         }
 
@@ -133,7 +156,7 @@
             margin-bottom: 1rem;
         }
 
-        /* Popup / Modal Styling */
+
         .popup-overlay {
             position: fixed;
             top: 0;
@@ -142,18 +165,22 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.6);
             display: flex;
+            /* Changed from justify/align */
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            padding: 1rem;
+            box-sizing: border-box;
         }
 
         .popup-card {
-            background-color: white;
+            background-color: var(--bg-color-card);
             padding: 2rem;
-            border-radius: 8px;
-            width: 80%;
-            max-width: 600px;
-            max-height: 80vh;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
             display: flex;
             flex-direction: column;
         }
@@ -168,8 +195,9 @@
 
         .popup-close-button {
             text-decoration: none;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             color: #888;
+            font-weight: 300;
         }
 
         .popup-content {
@@ -177,35 +205,44 @@
             margin-top: 1rem;
         }
 
-        /* Button Styling */
+        .popup-footer {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+
         button,
         .button-link {
-            font-size: large;
-            background-color: #357e3b;
-            border: 0px;
+            font-size: 1rem;
+            background-color: var(--primary-color);
+            border: none;
             border-radius: 5px;
-            color: white;
+            color: var(--text-color-light);
             cursor: pointer;
             text-decoration: none;
             display: inline-block;
-            padding: 8px 16px;
+            padding: 10px 20px;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+
+        form button {
+            width: 100%;
         }
 
         button:hover,
         .button-link:hover {
-            background-color: #1bbb33;
+            background-color: var(--primary-color-hover);
         }
 
-        /* Responsive Design for smaller screens */
+
         @media (max-width: 992px) {
             .summary-container {
                 flex-direction: column;
-                /* Stack items vertically */
             }
-        }
-        .input-box {
-            border: 1px;
-            border-radius: 5px;
         }
     </style>
 </head>
@@ -213,71 +250,98 @@
 <body>
     {{if .ShowSourcesPopup}}
     <div class="popup-overlay">
-        <div class="popup-card">
-            <div class="popup-header">
-                <h2>Source Balances</h2>
-                <a href="/home" class="popup-close-button">&times;</a>
+        <form action="/delete-sources" method="POST">
+            <div class="popup-card">
+                <div class="popup-header">
+                    <h2>Source Balances</h2>
+                    <a href="/home" class="popup-close-button">&times;</a>
+                </div>
+
+                <div class="popup-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;"></th>
+                                <th>Source</th>
+                                <th class="text-right">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .AllSources}}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="source_name" value="{{.SourceName}}">
+                                </td>
+                                <td>{{ .SourceName }}</td>
+                                <td class="text-right">{{ .Balance }}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="popup-footer">
+                    <button type="submit"
+                        onclick="return confirm('Are you sure you want to delete the selected sources?');">
+                        Delete Selected
+                    </button>
+                </div>
             </div>
-            <div class="popup-content">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Source</th>
-                            <th class="text-right">Balance</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{range .AllSources}}
-                        <tr>
-                            <td>{{ .SourceName }}</td>
-                            <td class="text-right">{{ .Balance }}</td>
-                        </tr>
-                        {{end}}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        </form>
     </div>
     {{end}}
 
     {{if .ShowTransPopup}}
     <div class="popup-overlay">
-        <div class="popup-card">
-            <div class="popup-header">
-                <h2>All Transactions</h2>
-                <a href="/home" class="popup-close-button">&times;</a>
+        <form action="/delete-transactions" method="POST">
+            <div class="popup-card">
+                <div class="popup-header">
+                    <h2>All Transactions</h2>
+                    <a href="/home" class="popup-close-button">&times;</a>
+                </div>
+
+                <div class="popup-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;"></th>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Source</th>
+                                <th class="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .AllTransactions}}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="trans_id" value="{{.TransactionID}}">
+                                </td>
+                                <td>{{ .TransactionDate.Format "Jan 2, 2006" }}</td>
+                                <td>{{ .CategoryName }}</td>
+                                <td>{{ .SourceName }}</td>
+                                <td class="text-right">
+                                    {{if eq .CategoryType "EXPENSE"}}
+                                    <span class="expense">-{{.Amount}}</span>
+                                    {{else if eq .CategoryType "INCOME"}}
+                                    <span class="income">+{{.Amount}}</span>
+                                    {{else}}
+                                    <span>{{.Amount}}</span>
+                                    {{end}}
+                                </td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="popup-footer">
+                    <button type="submit"
+                        onclick="return confirm('Are you sure you want to delete the selected transactions?');">
+                        Delete Selected
+                    </button>
+                </div>
             </div>
-            <div class="popup-content">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Category</th>
-                            <th>Source</th>
-                            <th class="text-right">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{range .AllTransactions}}
-                        <tr>
-                            <td>{{ .TransactionDate.Format "Jan 2, 2006" }}</td>
-                            <td>{{ .CategoryName }}</td>
-                            <td>{{ .SourceName }}</td>
-                            <td class="text-right">
-                                {{if eq .CategoryType "EXPENSE"}}
-                                <span class="expense">-{{.Amount}}</span>
-                                {{else if eq .CategoryType "INCOME"}}
-                                <span class="income">+{{.Amount}}</span>
-                                {{else}}
-                                <span>{{.Amount}}</span>
-                                {{end}}
-                            </td>
-                        </tr>
-                        {{end}}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        </form>
     </div>
     {{end}}
 
@@ -288,39 +352,41 @@
             <form action="/AddTransaction" method="POST">
                 <div class="form-group">
                     <label for="amount">Transaction Amount</label>
-                    <input type="number" id="amount" name="amount" step="0.01" placeholder="Amount" class = "input-box" required>
+                    <input type="number" id="amount" name="amount" step="0.01" placeholder="Amount" required>
+                    <div class="error-text">{{.FormErrors.negative_amount}}</div>
                 </div>
 
                 <div class="form-group">
                     <label for="type">Transaction Type</label>
-                    <select id="type" name="transaction_type" class = "input-box" required>
+                    <select id="type" name="transaction_type" required>
                         <option value="" disabled selected>Select type</option>
                         <option value="Income">Income</option>
                         <option value="Expense">Expense</option>
                     </select>
+                    <div class="error-text"></div>
                 </div>
 
                 <div class="form-group">
                     <label for="name">Transaction Name</label>
-                    <input type="text" id="name" name="category_name" class = "input-box" placeholder="Transaction Name" required>
+                    <input type="text" id="name" name="category_name" placeholder="Transaction Name" required>
+                    <div class="error-text"></div>
                 </div>
 
                 <div class="form-group">
                     <label for="source">Source</label>
-                    <select id="source" name="source_name" class = "input-box" required>
+                    <select id="source" name="source_name" required>
                         <option value="" disabled selected>Select a source</option>
                         {{range .AvailableSources}}
                         <option value="{{.}}">{{.}}</option>
                         {{end}}
                     </select>
-                    {{if .FormErrors.not_enough_balance}}
                     <div class="error-text">{{.FormErrors.not_enough_balance}}</div>
-                    {{end}}
                 </div>
 
                 <div class="form-group">
                     <label for="date">Transaction Date</label>
-                    <input type="date" id="date" class = "input-box" name="transaction_date" required>
+                    <input type="date" id="date" name="transaction_date" required>
+                    <div class="error-text"></div>
                 </div>
 
                 <div class="form-group">
@@ -335,17 +401,13 @@
             <form action="/AddSource" method="POST">
                 <div class="form-group">
                     <label for="source-name">Source Name</label>
-                    <input type="text" id="source-name" name="source_name" placeholder="Source Name" class = "input-box" required>
-                    {{if .FormErrors.source_name}}
+                    <input type="text" id="source-name" name="source_name" placeholder="Source Name" required>
                     <div class="error-text">{{.FormErrors.source_name}}</div>
-                    {{end}}
                 </div>
                 <div class="form-group">
                     <label for="balance">Initial Balance</label>
-                    <input type="number" id="balance" name="balance" step="0.01" class = "input-box">
-                    {{if .FormErrors.balance}}
+                    <input type="number" id="balance" name="balance" step="0.01" placeholder="0.00">
                     <div class="error-text">{{.FormErrors.balance}}</div>
-                    {{end}}
                 </div>
                 <div class="form-group">
                     <label style="visibility: hidden;">Submit</label>
@@ -364,7 +426,8 @@
                     <div>
                         <h3>Income: <span class="income">{{.MonthIncome}}</span></h3>
                         <h3>Expense: <span class="expense">{{.MonthExpense}}</span></h3>
-                        <h3>Current Balance: {{.Balance}}</h3>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 1rem 0;">
+                        <h3>Current Balance: <strong>{{.Balance}}</strong></h3>
                     </div>
                 </div>
                 <div class="recent-transactions-card">
