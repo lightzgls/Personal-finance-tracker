@@ -9,28 +9,34 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
+func CheckSourceActive(db *pgx.Conn, name string) (string, error) {
+    var isActive bool
+    sql := "SELECT is_active FROM account WHERE source_name = $1"
 
-func sourceExist(db *pgx.Conn, name string) (bool, error) {
-	var placeholderID string
-	ExistCheck := `SELECT source_name FROM ACCOUNT WHERE source_name = $1;`
+    err := db.QueryRow(context.Background(), sql, name).Scan(&isActive)
+    if err != nil {
+        if err == pgx.ErrNoRows {
+            // No row was found, so the source does not exist.
+            return "not_found", nil
+        }
+        // Any other error is a real database problem.
+        return "", err
+    }
 
-	err := db.QueryRow(context.Background(), ExistCheck,name).Scan(&placeholderID)
-
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			log.Printf("Found no %v in account list\n",name)
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
+    if isActive {
+        return "active", nil
+    }
+    
+    return "inactive", nil
 }
 
 func GetAllTransactions(db *pgx.Conn) ([]model.TransactionInfo, error) {
 
 	rows, err := db.Query(context.Background(), `SELECT
+													T.TRANSACTION_ID,
 													T.AMOUNT,
 													T.CATEGORY_TYPE,
 													T.CATEGORY_NAME,
@@ -48,7 +54,7 @@ func GetAllTransactions(db *pgx.Conn) ([]model.TransactionInfo, error) {
 	var AllTransactions []model.TransactionInfo
 	for rows.Next() {
 		var t model.TransactionInfo
-		err := rows.Scan(&t.Amount, &t.CategoryType, &t.CategoryName, &t.TransactionDate, &t.SourceName)
+		err := rows.Scan(&t.TransactionID,&t.Amount, &t.CategoryType, &t.CategoryName, &t.TransactionDate, &t.SourceName)
 		if err != nil {
 			log.Printf("ERROR scanning row: %v\n", err)
 			return nil, err
@@ -68,6 +74,8 @@ func AddTransactions(db *pgx.Conn, req model.AddTransactionRequest) error {
 	if err != nil {
 		log.Printf("Error parsing string to Float64: %v\n", err)
 		return err
+	} else if amount < 0 {
+		return ErrNegativeAmount
 	}
 
 	categoryType := strings.ToLower(req.CategoryType)
@@ -92,7 +100,6 @@ func AddTransactions(db *pgx.Conn, req model.AddTransactionRequest) error {
 		if err != nil {
 			return fmt.Errorf("error checking balance for source '%s': %w", req.SourceName, err)
 		}
-
 		if currentBalance < amount {
 			return ErrNotEnoughBalance
 		}
@@ -129,17 +136,21 @@ func AddTransactions(db *pgx.Conn, req model.AddTransactionRequest) error {
 var ErrDuplicateSource = errors.New("repository: source with that name already exists")
 var ErrInvalidBalance = errors.New("repository: initial balance cannot be negative")
 var ErrNotEnoughBalance = errors.New("repository: the choosen source doesnt have enough in balance")
+var ErrNegativeAmount = errors.New("repository: The transaction amount cant be negative")
 
 func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
-	exist, err:= sourceExist(db,a.SourceName)
-	if err != nil {
+	var SourceQuery string
+	status,err := CheckSourceActive(db,a.SourceName);
+	if status == "active" {
+		return ErrDuplicateSource
+	} else if status == "inactive" {
+		SourceQuery = "UPDATE account set is_active = true, balance = balance + $1 WHERE source_name = $2"
+	} else if  status == "not_found" {
+		SourceQuery = "INSERT INTO ACCOUNT (source_name,balance) VALUES ($1,$2);"
+	} else {
 		return err
 	}
-	if exist {
-		return ErrDuplicateSource
-	}
-	InsertSourceQuery := "INSERT INTO ACCOUNT (source_name,balance) VALUES ($1,$2);"
-	var balance float64 // Declare the variable to hold the final value
+	var balance float64 
 
 	if a.Balance == "" {
 		balance = 0.0
@@ -155,7 +166,7 @@ func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
 	if balance < 0 {
         return ErrInvalidBalance
     }
-	_,err = db.Exec(context.Background(),InsertSourceQuery,a.SourceName,balance)
+	_,err = db.Exec(context.Background(),SourceQuery,a.SourceName,balance)
 	if err != nil {
 		log.Printf("Error adding new source: %v\n",err)
 		return err
@@ -166,7 +177,7 @@ func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
 
 
 func GetSummary(db *pgx.Conn) (balance, monthIncome, monthExpense float64, Error error) {
-	BalanceQuery := `SELECT COALESCE(SUM(balance), 0) FROM account;` 
+	BalanceQuery := `SELECT COALESCE(SUM(balance), 0) FROM account WHERE is_active = TRUE;` 
 
 	err := db.QueryRow(context.Background(), BalanceQuery).Scan(&balance)
 	if err != nil {
@@ -189,7 +200,7 @@ func GetSummary(db *pgx.Conn) (balance, monthIncome, monthExpense float64, Error
 	return
 }
 func GetAllSources(db *pgx.Conn) ([]model.Account, error) {
-	query := `SELECT * FROM ACCOUNT`
+	query := `SELECT * FROM ACCOUNT WHERE is_active = TRUE`
 	rows, err := db.Query(context.Background(), query)
 	if err != nil {
 		log.Printf("ERROR querying: %v", err)
@@ -197,7 +208,7 @@ func GetAllSources(db *pgx.Conn) ([]model.Account, error) {
 	var AllSource []model.Account
 	for rows.Next() {
 		var a model.Account
-		err := rows.Scan(&a.SourceName, &a.Balance, &a.CreatedAt)
+		err := rows.Scan(&a.SourceName, &a.Balance, &a.CreatedAt,&a.IsActive)
 		if err != nil {
 			log.Printf("ERROR scanning row: %v\n", err)
 			return nil, err
@@ -209,7 +220,7 @@ func GetAllSources(db *pgx.Conn) ([]model.Account, error) {
 
 
 func GetAllSoucesName(db *pgx.Conn) ([]string, error) {
-	query := `SELECT source_name FROM ACCOUNT`
+	query := `SELECT source_name FROM account WHERE is_active = TRUE`
 	rows, err := db.Query(context.Background(), query)
 	if err != nil {
 		log.Printf("ERROR querying: %v", err)
@@ -231,4 +242,25 @@ func GetAllSoucesName(db *pgx.Conn) ([]string, error) {
 		return nil,err
 	}
 	return Name, nil
+}
+func DeleteTransactionsByIDs(db *pgx.Conn, ids []uuid.UUID) (int64, error) {
+    sql := "DELETE FROM transaction WHERE transaction_id = ANY($1)"
+    
+    result, err := db.Exec(context.Background(), sql, ids)
+    if err != nil {
+        return 0, err
+    }
+
+    return result.RowsAffected(), nil
+}
+
+func InactiveSources(db *pgx.Conn, names []string) (int64, error) {
+    sql := "UPDATE account SET is_active = FALSE WHERE source_name = ANY($1)"
+    log.Println("repo")
+    result, err := db.Exec(context.Background(), sql, names)
+    if err != nil {
+        return 0, err
+    }
+
+    return result.RowsAffected(), nil
 }
