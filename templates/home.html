@@ -203,6 +203,10 @@
                 /* Stack items vertically */
             }
         }
+        .input-box {
+            border: 1px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 
@@ -284,12 +288,12 @@
             <form action="/AddTransaction" method="POST">
                 <div class="form-group">
                     <label for="amount">Transaction Amount</label>
-                    <input type="number" id="amount" name="amount" step="0.01" placeholder="Amount" required>
+                    <input type="number" id="amount" name="amount" step="0.01" placeholder="Amount" class = "input-box" required>
                 </div>
 
                 <div class="form-group">
                     <label for="type">Transaction Type</label>
-                    <select id="type" name="transaction_type" required>
+                    <select id="type" name="transaction_type" class = "input-box" required>
                         <option value="" disabled selected>Select type</option>
                         <option value="Income">Income</option>
                         <option value="Expense">Expense</option>
@@ -298,12 +302,12 @@
 
                 <div class="form-group">
                     <label for="name">Transaction Name</label>
-                    <input type="text" id="name" name="category_name" placeholder="Transaction Name" required>
+                    <input type="text" id="name" name="category_name" class = "input-box" placeholder="Transaction Name" required>
                 </div>
 
                 <div class="form-group">
                     <label for="source">Source</label>
-                    <select id="source" name="source_name" required>
+                    <select id="source" name="source_name" class = "input-box" required>
                         <option value="" disabled selected>Select a source</option>
                         {{range .AvailableSources}}
                         <option value="{{.}}">{{.}}</option>
@@ -316,12 +320,12 @@
 
                 <div class="form-group">
                     <label for="date">Transaction Date</label>
-                    <input type="date" id="date" name="transaction_date" required>
+                    <input type="date" id="date" class = "input-box" name="transaction_date" required>
                 </div>
 
                 <div class="form-group">
                     <label style="visibility: hidden;">Submit</label>
-                    <button type="submit">Add</button>
+                    <button type="submit">Add Transaction</button>
                 </div>
             </form>
         </section>
@@ -331,21 +335,21 @@
             <form action="/AddSource" method="POST">
                 <div class="form-group">
                     <label for="source-name">Source Name</label>
-                    <input type="text" id="source-name" name="source_name" placeholder="Source Name" required>
+                    <input type="text" id="source-name" name="source_name" placeholder="Source Name" class = "input-box" required>
                     {{if .FormErrors.source_name}}
                     <div class="error-text">{{.FormErrors.source_name}}</div>
                     {{end}}
                 </div>
                 <div class="form-group">
                     <label for="balance">Initial Balance</label>
-                    <input type="number" id="balance" name="balance" step="0.01" required>
+                    <input type="number" id="balance" name="balance" step="0.01" class = "input-box">
                     {{if .FormErrors.balance}}
                     <div class="error-text">{{.FormErrors.balance}}</div>
                     {{end}}
                 </div>
                 <div class="form-group">
                     <label style="visibility: hidden;">Submit</label>
-                    <button type="submit">Add</button>
+                    <button type="submit">Add Source</button>
                 </div>
             </form>
         </section>
