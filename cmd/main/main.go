@@ -37,6 +37,9 @@ func main() {
 	http.HandleFunc(("/Balances"), handler.GetAllSourcesHandler(db))
 	http.HandleFunc(("/AddTransaction"), handler.AddTransactionHandler(db,templates))
 	http.HandleFunc(("/AddSource"), handler.AddSourceHandler(db))
+	http.HandleFunc(("/delete-transactions"), handler.DeleteTransactionsHandler(db))
+	http.HandleFunc(("/delete-sources"),handler.InactiveSoucesHandler(db))
+
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
