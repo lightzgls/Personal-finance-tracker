@@ -9,37 +9,39 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        h2 {
-            display: inline-block;
-        }
-
+        /* General Body and Font Styles */
         body {
-            background-color: rgb(236, 236, 234);
+            background-color: rgb(202, 243, 202);
             font-family: 'Roboto', sans-serif;
             padding: 1rem;
+            margin: 0;
+        }
+
+        h2 {
+            display: inline-block;
+            margin-top: 0;
         }
 
         section {
-            background-color: rgb(255, 255, 255);
+            background-color: rgb(236, 248, 235);
             border-radius: 10px;
             margin-top: 30px;
             padding: 1.5rem;
-            /* Added some padding for better spacing */
         }
 
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
+        /* Form Styling */
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 1rem;
+            /* Replaces margin-right */
         }
 
         .form-group {
-            display: inline-block;
-            vertical-align: top;
-            width: 170px;
-            margin-right: 1rem;
-            margin-bottom: 1rem;
+            flex: 1 1 170px;
+            /* Allows items to grow, shrink, and have a base width */
+            min-width: 170px;
         }
 
         .form-group label {
@@ -48,32 +50,50 @@
             margin-bottom: 0.3rem;
         }
 
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            height: 38px;
+            /* Match button height */
+        }
+
         form button {
-            width: 170px;
+            width: 100%;
+            max-width: 170px;
+            /* To align with other form groups */
             height: 38px;
         }
 
-        table,
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 10px;
+            /* Note: border-radius on table requires border-collapse: separate; or overflow: hidden on a wrapper */
+            margin: 0;
+        }
+
         th,
         td {
-            border: 1px, solid black;
-            border-collapse: collapse;
+            border: 1px solid #ddd;
             padding: 8px 12px;
-            /* Added padding to table cells */
         }
 
-        table {
-            border-radius: 10px;
-            margin: 0;
-            /* Adjusted margin for consistency */
+        thead {
+            background-color: #f2f2f2;
         }
 
+        /* Utility and Transaction Colors */
         .income {
             color: #28a745;
+            font-weight: 500;
         }
 
         .expense {
             color: #dc3545;
+            font-weight: 500;
         }
 
         .error-text {
@@ -82,25 +102,28 @@
             margin-top: 4px;
         }
 
-        .Summary {
-            margin-left: 20px;
-            display: inline-block;
-            width: 30%;
-
+        .text-right {
+            text-align: right;
         }
 
-        .Recent {
-            margin-left: 20px;
-            display: inline-block;
-            width: 60%;
-            min-width: 60%;
-            vertical-align: top;
-        }
-
-        .section3 {
-            width: 100%;
+        /* Layout for Summary & Recent Sections */
+        .summary-container {
             display: flex;
-            justify-content: first baseline;
+            flex-wrap: wrap;
+            /* Allows items to wrap on smaller screens */
+            gap: 20px;
+        }
+
+        .summary-card {
+            flex: 1 1 30%;
+            /* Grow, shrink, with a base of 30% */
+            min-width: 280px;
+        }
+
+        .recent-transactions-card {
+            flex: 2 1 60%;
+            /* Grow, shrink, with a base of 60% */
+            min-width: 300px;
         }
 
         .transaction-header {
@@ -110,20 +133,18 @@
             margin-bottom: 1rem;
         }
 
+        /* Popup / Modal Styling */
         .popup-overlay {
             position: fixed;
-            /* Sits on top of the page */
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.6);
-            /* Semi-transparent background */
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            /* Ensures it's on top */
         }
 
         .popup-card {
@@ -133,7 +154,6 @@
             width: 80%;
             max-width: 600px;
             max-height: 80vh;
-            /* Limits height to 80% of the viewport */
             display: flex;
             flex-direction: column;
         }
@@ -154,31 +174,34 @@
 
         .popup-content {
             overflow-y: auto;
-            /* This makes the content scrollable! */
             margin-top: 1rem;
         }
 
+        /* Button Styling */
+        button,
         .button-link {
-            display: inline-block;
-            /* Allows padding and margins */
-            padding: 8px 16px;
-            background-color: #007bff;
-            /* A nice blue color */
-            color: white;
-            /* White text */
-            text-decoration: none;
-            /* Removes the link underline */
-            border: none;
+            font-size: large;
+            background-color: #357e3b;
+            border: 0px;
             border-radius: 5px;
-            /* Rounds the corners */
+            color: white;
             cursor: pointer;
-            /* Shows a pointer on hover */
-            font-size: 1em;
+            text-decoration: none;
+            display: inline-block;
+            padding: 8px 16px;
         }
 
+        button:hover,
         .button-link:hover {
-            background-color: #0056b3;
-            /* A darker blue */
+            background-color: #1bbb33;
+        }
+
+        /* Responsive Design for smaller screens */
+        @media (max-width: 992px) {
+            .summary-container {
+                flex-direction: column;
+                /* Stack items vertically */
+            }
         }
     </style>
 </head>
@@ -192,18 +215,18 @@
                 <a href="/home" class="popup-close-button">&times;</a>
             </div>
             <div class="popup-content">
-                <table style="width: 100%;">
+                <table>
                     <thead>
                         <tr>
                             <th>Source</th>
-                            <th style="text-align: right;">Balance</th>
+                            <th class="text-right">Balance</th>
                         </tr>
                     </thead>
                     <tbody>
                         {{range .AllSources}}
                         <tr>
                             <td>{{ .SourceName }}</td>
-                            <td style="text-align: right;">{{ .Balance }}</td>
+                            <td class="text-right">{{ .Balance }}</td>
                         </tr>
                         {{end}}
                     </tbody>
@@ -221,13 +244,13 @@
                 <a href="/home" class="popup-close-button">&times;</a>
             </div>
             <div class="popup-content">
-                <table style="width: 100%;">
+                <table>
                     <thead>
                         <tr>
                             <th>Date</th>
                             <th>Category</th>
                             <th>Source</th>
-                            <th style="text-align: right;">Amount</th>
+                            <th class="text-right">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -236,7 +259,8 @@
                             <td>{{ .TransactionDate.Format "Jan 2, 2006" }}</td>
                             <td>{{ .CategoryName }}</td>
                             <td>{{ .SourceName }}</td>
-                            <td style="text-align: right;"> {{if eq .CategoryType "EXPENSE"}}
+                            <td class="text-right">
+                                {{if eq .CategoryType "EXPENSE"}}
                                 <span class="expense">-{{.Amount}}</span>
                                 {{else if eq .CategoryType "INCOME"}}
                                 <span class="income">+{{.Amount}}</span>
@@ -279,14 +303,12 @@
 
                 <div class="form-group">
                     <label for="source">Source</label>
-
                     <select id="source" name="source_name" required>
                         <option value="" disabled selected>Select a source</option>
                         {{range .AvailableSources}}
                         <option value="{{.}}">{{.}}</option>
                         {{end}}
                     </select>
-
                     {{if .FormErrors.not_enough_balance}}
                     <div class="error-text">{{.FormErrors.not_enough_balance}}</div>
                     {{end}}
@@ -298,8 +320,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="add-transaction-btn" style="visibility: hidden;">Submit</label>
-                    <button type="submit" id="add-transaction-btn">Add</button>
+                    <label style="visibility: hidden;">Submit</label>
+                    <button type="submit">Add</button>
                 </div>
             </form>
         </section>
@@ -308,9 +330,8 @@
             <h2>Add New Source</h2>
             <form action="/AddSource" method="POST">
                 <div class="form-group">
-                    <label for="source">Source</label>
-                    <input type="text" id="source" name="source_name" placeholder="Source Name" required>
-
+                    <label for="source-name">Source Name</label>
+                    <input type="text" id="source-name" name="source_name" placeholder="Source Name" required>
                     {{if .FormErrors.source_name}}
                     <div class="error-text">{{.FormErrors.source_name}}</div>
                     {{end}}
@@ -323,18 +344,18 @@
                     {{end}}
                 </div>
                 <div class="form-group">
-                    <label for="add-source-btn" style="visibility: hidden;">Submit</label>
-                    <button id="add-source-btn">Add</button>
+                    <label style="visibility: hidden;">Submit</label>
+                    <button type="submit">Add</button>
                 </div>
             </form>
         </section>
 
         <section>
-            <div class="section3">
-                <div class="Summary">
+            <div class="summary-container">
+                <div class="summary-card">
                     <div class="transaction-header">
                         <h2>Summary This Month</h2>
-                        <a href="/home?show_all_sources=true" class="button-link">Show All Balances</a>
+                        <a href="/home?show_all_sources=true" class="button-link">All Balances</a>
                     </div>
                     <div>
                         <h3>Income: <span class="income">{{.MonthIncome}}</span></h3>
@@ -342,18 +363,18 @@
                         <h3>Current Balance: {{.Balance}}</h3>
                     </div>
                 </div>
-                <div class="Recent">
+                <div class="recent-transactions-card">
                     <div class="transaction-header">
-                        <h2>Recent Transaction</h2>
-                        <a href="/home?show_all_transactions=true" class="button-link">Show all Transactions</a>
+                        <h2>Recent Transactions</h2>
+                        <a href="/home?show_all_transactions=true" class="button-link">Show All</a>
                     </div>
-                    <table style="width: 100%;">
+                    <table>
                         <thead>
                             <tr>
                                 <th style="width: 25%;">Date</th>
                                 <th style="width: 25%;">Category</th>
                                 <th style="width: 25%;">Source</th>
-                                <th style="width: 25%; text-align: right;">Amount</th>
+                                <th class="text-right" style="width: 25%;">Amount</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -362,7 +383,8 @@
                                 <td>{{ .TransactionDate.Format "Jan 2, 2006" }}</td>
                                 <td>{{ .CategoryName }}</td>
                                 <td>{{ .SourceName }}</td>
-                                <td style="text-align: right;"> {{if eq .CategoryType "EXPENSE"}}
+                                <td class="text-right">
+                                    {{if eq .CategoryType "EXPENSE"}}
                                     <span class="expense">-{{.Amount}}</span>
                                     {{else if eq .CategoryType "INCOME"}}
                                     <span class="income">+{{.Amount}}</span>

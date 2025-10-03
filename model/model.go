@@ -6,11 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type PageData struct {
-	Title   string
-	Content string
-}
-
 type Account struct {
 	SourceName string    `db:"source_name"`
 	Balance    float64   `db:"balance"`
