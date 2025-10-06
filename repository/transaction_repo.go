@@ -146,7 +146,7 @@ func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
 	} else if status == "inactive" {
 		SourceQuery = "UPDATE account set is_active = true, balance = balance + $1 WHERE source_name = $2"
 	} else if  status == "not_found" {
-		SourceQuery = "INSERT INTO ACCOUNT (source_name,balance) VALUES ($1,$2);"
+		SourceQuery = "INSERT INTO ACCOUNT (balance,source_name) VALUES ($1,$2);"
 	} else {
 		return err
 	}
@@ -166,7 +166,7 @@ func AddSource(db *pgx.Conn,a model.AddSourceRequest) error {
 	if balance < 0 {
         return ErrInvalidBalance
     }
-	_,err = db.Exec(context.Background(),SourceQuery,a.SourceName,balance)
+	_,err = db.Exec(context.Background(),SourceQuery,balance,a.SourceName)
 	if err != nil {
 		log.Printf("Error adding new source: %v\n",err)
 		return err
@@ -244,9 +244,9 @@ func GetAllSoucesName(db *pgx.Conn) ([]string, error) {
 	return Name, nil
 }
 func DeleteTransactionsByIDs(db *pgx.Conn, ids []uuid.UUID) (int64, error) {
-    sql := "DELETE FROM transaction WHERE transaction_id = ANY($1)"
+    query := "DELETE FROM transaction WHERE transaction_id = ANY($1)"
     
-    result, err := db.Exec(context.Background(), sql, ids)
+    result, err := db.Exec(context.Background(), query, ids)
     if err != nil {
         return 0, err
     }
@@ -255,9 +255,8 @@ func DeleteTransactionsByIDs(db *pgx.Conn, ids []uuid.UUID) (int64, error) {
 }
 
 func InactiveSources(db *pgx.Conn, names []string) (int64, error) {
-    sql := "UPDATE account SET is_active = FALSE WHERE source_name = ANY($1)"
-    log.Println("repo")
-    result, err := db.Exec(context.Background(), sql, names)
+    query := "UPDATE account SET is_active = FALSE WHERE source_name = ANY($1)"
+    result, err := db.Exec(context.Background(), query, names)
     if err != nil {
         return 0, err
     }

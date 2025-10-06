@@ -360,7 +360,6 @@ func InactiveSoucesHandler(db *pgx.Conn) http.HandlerFunc {
             http.Error(w, "Failed to parse form", http.StatusBadRequest)
             return
         }
-		log.Println("handler")
         names := r.PostForm["source_name"]
         if len(names) == 0 {
             http.Redirect(w, r, "/home?show_all_sources=true", http.StatusSeeOther)
