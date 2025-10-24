@@ -1,6 +1,8 @@
 # Personal Finance Tracker
 
 A web-based personal finance management application built with Go and PostgreSQL. Track your income, expenses, and account balances with an intuitive interface.
+<img width="1918" height="926" alt="image" src="https://github.com/user-attachments/assets/5735fa3e-4c4d-4e46-bd1e-667917d5bbd1" />
+
 
 ## Features
 
